@@ -10,12 +10,11 @@ extract_to_darf = r"/home/tiagomurilo/Documentos/pdfFinanceiro/darf"
 extract_to_nfe = r"/home/tiagomurilo/Documentos/pdfFinanceiro/nfe"
 
 def split_pdf_pages():
-    directory = r"/home/tiagomurilo/Documentos/pdfFinanceiro/ajustado"
-
     # pegando diretório e arquivos
     for root, dirs, files in os.walk(root_dir):
         # para cada arquivo se busca o nome e extenção
         for filename in files:
+            directory = r"/home/tiagomurilo/Documentos/pdfFinanceiro/ajustado"
             basename, extension = os.path.splitext(filename)
 
             # verifica se arquivo é PDF
@@ -30,7 +29,7 @@ def split_pdf_pages():
                     directory = extract_to_boletos
                 elif pdf_text.find("Esta NF-em foi gerada com fundamento na Lei Complementar Municipal n. 286, de 21") != -1:
                     directory = extract_to_nfe
-                elif pdf_text.find("Itáu Unibanco") != -1:
+                elif pdf_text.find("Itaú Unibanco") != -1:
                     directory = extract_to_boletos
                 elif pdf_text.find("BANRISUL") != -1:
                     directory = extract_to_boletos
@@ -55,17 +54,16 @@ def rename_identifyClient_boletos():
     for root, dirs, files in os.walk(extract_to_boletos):
         for filename in files:
             basename, extension = os.path.splitext(filename)
+
             archives.append(extract_to_boletos + "/" + basename + "" + extension)
 
     for archive in archives:
-
         pdf_file_obj = fitz.Document(archive)
         pdf_reader = pdf_file_obj.loadPage(0)
         pdf_text = str(pdf_reader.getText("text"))
 
         if pdf_text.find("BRADESCO") != -1:
-
-            nfe = pdf_text.split("NFe:\n")[1].split(" " * 8)[1].split('\n')[0]
+            nfe = pdf_text.split('APÓS 10 DIAS VENCIDO SUJEITO A ENVIO A CARTÓRIO')[3].split('\n')[5].split('\n')[0].replace('/', ' ')
             clientData = pdf_text.split("Pagador")[3].split("\n")[12].replace('-', '')
             clientCnpj = clientData.split('  ')[0].replace('.', '').replace('/', '')
             clientCode = clientData.split('  ')[1]
@@ -92,7 +90,7 @@ def rename_identifyClient_boletos():
             })
 
         if pdf_text.find("Itaú Unibanco") != -1:
-            nfe = pdf_text.split("Valor do Documento\n")[2].split("\n")[4].split("/")[0]
+            nfe = pdf_text.split("Valor do Documento\n")[2].split("\n")[4].replace('/', ' ')
             clientNameAdjust = pdf_text.split("Pagador\n")[1].split("\n")[0].replace('.', '').replace('&', 'E').split(' ')
             if clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e":
                 clientNameAdjust.remove(clientNameAdjust[1])
@@ -117,7 +115,8 @@ def rename_identifyClient_boletos():
             })
 
         if pdf_text.find("BANRISUL") != -1:
-            nfe = pdf_text.split('Número do Documento\n')[1].split('/')[0]
+            nfe = pdf_text.split('Número do Documento\n')[1].split('\n')[0].replace('/', ' ')
+
             processDate = pdf_text.split('Data do Processamento\n')[1].split('\n')[0][3:10].replace('/', '-')
             clientNameAdjust = pdf_text.split('Pagador\n')[1].split('\n')[0].replace('-', '').replace('&', '').replace('.', '').split(' ')
             if clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e" or clientNameAdjust[1] == "do" or clientNameAdjust[1] == "DO":
@@ -226,7 +225,7 @@ def rename_identifyClient_darf():
             "metaCnpj": metaCnpj,
             "metaName": metaName,
             "type": "DARF",
-            "archive": extract_to_boletos + "/" + clientName + " - NF " + nfe + " - (DARF)" + extension
+            "archive": extract_to_darf + "/" + clientName + " - NF " + nfe + " - (DARF)" + extension
         })
 
 
