@@ -2,21 +2,22 @@
 import PyPDF2
 import os
 import fitz
+import time
 
 # variaveis
-root_dir = r"/home/tiagomurilo/Documentos/pdfFinanceiro/original"
-extract_to_boletos = r"/home/tiagomurilo/Documentos/pdfFinanceiro/boletos"
-extract_to_darf = r"/home/tiagomurilo/Documentos/pdfFinanceiro/darf"
-extract_to_nfe = r"/home/tiagomurilo/Documentos/pdfFinanceiro/nfe"
+original_files = r"C:/Users/Tiago Murilo/Desktop/original"
+extract_to_boletos = r"C:/Users/Tiago Murilo/Desktop/boletos"
+extract_to_darf = r"C:/Users/Tiago Murilo/Desktop/darf"
+extract_to_nfe = r"C:/Users/Tiago Murilo/Desktop/nfe"
 
 def split_pdf_pages():
     # pegando diretório e arquivos
-    for root, dirs, files in os.walk(root_dir):
+    print('- Separando paginas...')
+    for root, dirs, files in os.walk(original_files):
         # para cada arquivo se busca o nome e extenção
         for filename in files:
-            directory = r"/home/tiagomurilo/Documentos/pdfFinanceiro/ajustado"
+            directory = r"C:/Users/Tiago Murilo/Desktop/ajustados"
             basename, extension = os.path.splitext(filename)
-
             # verifica se arquivo é PDF
             if extension == ".pdf":
                 # referencia a pasta com o nome do novo arquivo
@@ -24,10 +25,11 @@ def split_pdf_pages():
                 pdf_file_obj = fitz.Document(fullpath)
                 pdf_reader = pdf_file_obj.loadPage(0)
                 pdf_text = str(pdf_reader.getText("text"))
+                pdf_file_obj.close()
 
                 if pdf_text.find("BRADESCO") != -1:
                     directory = extract_to_boletos
-                elif pdf_text.find("Esta NF-em foi gerada com fundamento na Lei Complementar Municipal n. 286, de 21") != -1:
+                elif pdf_text.find("Impressão NF-e") != -1:
                     directory = extract_to_nfe
                 elif pdf_text.find("Itaú Unibanco") != -1:
                     directory = extract_to_boletos
@@ -35,6 +37,10 @@ def split_pdf_pages():
                     directory = extract_to_boletos
                 elif pdf_text.find("PIS / COFINS / CSLL") != -1:
                     directory = extract_to_darf
+                elif pdf_text.find("Documento de Arrecadação de Receitas Federais") != -1:
+                    directory = extract_to_darf
+                elif pdf_text == "":
+                    directory = r"C:/Users/Tiago Murilo/Desktop/arquivos incorretos"
 
                 # abre o pdf no modo leitura
                 opened_pdf = PyPDF2.PdfFileReader(open(fullpath, "rb"))
@@ -46,11 +52,13 @@ def split_pdf_pages():
 
                     with open(directory + "/" + basename + " - " + str(i + 1) + ".pdf", "wb") as output_pdf:
                         output.write(output_pdf)
+    print('- Separação de paginas finalizada.')
 
 def rename_identifyClient_boletos():
     archives = []
     data = []
 
+    print('\n- Separando BOLETOS...')
     for root, dirs, files in os.walk(extract_to_boletos):
         for filename in files:
             basename, extension = os.path.splitext(filename)
@@ -61,17 +69,27 @@ def rename_identifyClient_boletos():
         pdf_file_obj = fitz.Document(archive)
         pdf_reader = pdf_file_obj.loadPage(0)
         pdf_text = str(pdf_reader.getText("text"))
+        pdf_file_obj.close()
 
         if pdf_text.find("BRADESCO") != -1:
             nfe = pdf_text.split('APÓS 10 DIAS VENCIDO SUJEITO A ENVIO A CARTÓRIO')[3].split('\n')[5].split('\n')[0].replace('/', ' ')
             clientData = pdf_text.split("Pagador")[3].split("\n")[12].replace('-', '')
             clientCnpj = clientData.split('  ')[0].replace('.', '').replace('/', '')
             clientCode = clientData.split('  ')[1]
+            clientName = ''
             clientNameAdjust = clientData.replace('&', 'E').split('  ')[2].split(' ')
-            if clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e":
-                    clientNameAdjust.remove(clientNameAdjust[1])
-            clientName = str(clientNameAdjust[0] + " " +clientNameAdjust[1]).replace('.', '')
-            metaName = pdf_text.split("Pagador")[3].split("\n")[2].replace('-', '')
+
+            if clientData.replace('&', 'E').split('  ')[2].strip().find(' ') != -1:
+                if(clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e" or clientNameAdjust[1] == "RESIDENCIAL" or clientNameAdjust[1] == "CONDOMÍNIO" or clientNameAdjust[1] == "Residencial" or clientNameAdjust[1] == "Condomínio" or clientNameAdjust[1] == "CONDOMINIO" or clientNameAdjust[1] == "Condominio"):
+                        clientNameAdjust.remove(clientNameAdjust[1])
+                clientName = str(clientNameAdjust[0] + " " +clientNameAdjust[1]).replace('.', '')
+                metaNameAdjust = pdf_text.split("Pagador")[3].split("\n")[2].replace('-', '').split(' ')
+            else:
+                clientName = clientData.replace('&', 'E').replace('/', '').split('  ')[2].strip()
+
+            if(metaNameAdjust[1] == "da" or metaNameAdjust[1] == "DA" or metaNameAdjust[1] == "de" or metaNameAdjust[1] == "DE" or metaNameAdjust[1] == "E" or metaNameAdjust[1] == "e"):
+                metaNameAdjust.remove(metaNameAdjust[1])
+            metaName = metaNameAdjust[0] + " " + metaNameAdjust[1]
             searchMetaCnpj = pdf_text.split("Pagável Preferencialmente na rede Bradesco ou no Bradesco expresso")[3].split('APÓS 10 DIAS VENCIDO SUJEITO A ENVIO A CARTÓRIO')[0].split("CPF/CNPJ do Sacado\n")[2].split('\n')[0]
             metaCnpj = searchMetaCnpj.replace('.', '').replace('/', '').replace('-', '')
             processDate = pdf_text.split("Data do Documento")[1].split("\n")[1][3:10].replace('/', '-')
@@ -91,13 +109,16 @@ def rename_identifyClient_boletos():
 
         if pdf_text.find("Itaú Unibanco") != -1:
             nfe = pdf_text.split("Valor do Documento\n")[2].split("\n")[4].replace('/', ' ')
-            clientNameAdjust = pdf_text.split("Pagador\n")[1].split("\n")[0].replace('.', '').replace('&', 'E').split(' ')
-            if clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e":
+            clientNameAdjust = pdf_text.split("Pagador\n")[1].split("\n")[0].replace('.', '').replace('&', 'E').replace('/','').split(' ')
+            if(clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e" or clientNameAdjust[1] == "RESIDENCIAL" or clientNameAdjust[1] == "CONDOMÍNIO" or clientNameAdjust[1] == "Residencial" or clientNameAdjust[1] == "Condomínio" or clientNameAdjust[1] == "CONDOMINIO" or clientNameAdjust[1] == "Condominio"):
                 clientNameAdjust.remove(clientNameAdjust[1])
             clientName = clientNameAdjust[0] + " - " + clientNameAdjust[1]
             clientCnpj = pdf_text.split("Benef iciário")[2].split("\n")[1].replace('.', '').replace('/', '').replace('-', '')
             clientCode = '-'
-            metaName = pdf_text.split("APÓS 10 DIAS VENCIDO SUJEITO A ENVIO A CARTÓRIO")[1].split("\n")[1].split("-")[0]
+            metaNameAdjust = pdf_text.split("APÓS 10 DIAS VENCIDO SUJEITO A ENVIO A CARTÓRIO")[1].split("\n")[1].split("-")[0].strip().split(' ')
+            if(metaNameAdjust[1] == "da" or metaNameAdjust[1] == "DA" or metaNameAdjust[1] == "de" or metaNameAdjust[1] == "DE" or metaNameAdjust[1] == "E" or metaNameAdjust[1] == "e"):
+                metaNameAdjust.remove(metaNameAdjust[1])
+            metaName = metaNameAdjust[0] + " " + metaNameAdjust[1]
             metaCnpj = pdf_text.split("APÓS 10 DIAS VENCIDO SUJEITO A ENVIO A CARTÓRIO")[1].split("\n")[1].split("CNPJ: ")[1].replace('.', '').replace('/', '').replace('-', '')
             processDate = pdf_text.split("Número do Documento\n")[1].split("\n")[2][3:10].replace('/', '-')
 
@@ -118,14 +139,17 @@ def rename_identifyClient_boletos():
             nfe = pdf_text.split('Número do Documento\n')[1].split('\n')[0].replace('/', ' ')
 
             processDate = pdf_text.split('Data do Processamento\n')[1].split('\n')[0][3:10].replace('/', '-')
-            clientNameAdjust = pdf_text.split('Pagador\n')[1].split('\n')[0].replace('-', '').replace('&', '').replace('.', '').split(' ')
-            if clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e" or clientNameAdjust[1] == "do" or clientNameAdjust[1] == "DO":
+            clientNameAdjust = pdf_text.split('Pagador\n')[1].split('\n')[0].replace('-', '').replace('&', '').replace('.', '').replace('/', '').split(' ')
+            if(clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e" or clientNameAdjust[1] == "RESIDENCIAL" or clientNameAdjust[1] == "CONDOMÍNIO" or clientNameAdjust[1] == "Residencial" or clientNameAdjust[1] == "Condomínio" or clientNameAdjust[1] == "CONDOMINIO" or clientNameAdjust[1] == "Condominio"):
                 clientNameAdjust.remove(clientNameAdjust[1])
             clientName = clientNameAdjust[0] + " " + clientNameAdjust[1]
             clientCnpj = pdf_text.split('Pagador\n')[1].split('\n')[2].replace('.', '').replace('/', '').replace('-', '')
             clientCode = '-'
             metaCnpj = pdf_text.split('CPF/CNPJ\n ')[1].split('\n')[0].replace('.', '').replace('/', '').replace('-', '')
-            metaName = pdf_text.split('CPF/CNPJ - \n')[2].split('\n')[3].split(" - ")[0]
+            metaNameAdjust = pdf_text.split('CPF/CNPJ - \n')[2].split('\n')[3].split(" - ")[0].split(' ')
+            if(metaNameAdjust[1] == "da" or metaNameAdjust[1] == "DA" or metaNameAdjust[1] == "de" or metaNameAdjust[1] == "DE" or metaNameAdjust[1] == "E" or metaNameAdjust[1] == "e"):
+                metaNameAdjust.remove(metaNameAdjust[1])
+            metaName = metaNameAdjust[0] + " " + metaNameAdjust[1]
 
             os.rename(archive, extract_to_boletos + "/" + clientName + " - NF " + nfe + " - (Boleto Banrisul)" + extension)
             data.append({
@@ -140,12 +164,14 @@ def rename_identifyClient_boletos():
                 "archive": extract_to_boletos + "/" + clientName + " - NF " + nfe + " - (Boleto Banrisul)" + extension
             })
 
+    print('- Separacao de BOLETOS concluido.')
     return data
 
 def rename_identifyClient_nfe():
     archives = []
     data = []
 
+    print("\n- Separando NFe...") 
     for root, dirs, files in os.walk(extract_to_nfe):
         for filename in files:
             basename, extension = os.path.splitext(filename)
@@ -156,16 +182,20 @@ def rename_identifyClient_nfe():
         pdf_file_obj = fitz.Document(archive)
         pdf_reader = pdf_file_obj.loadPage(0)
         pdf_text = str(pdf_reader.getText("text"))
+        pdf_file_obj.close()
 
-        if(pdf_text.find("Número da NF-em ") != -1):
+        if(pdf_text.find("Numero da NF-em ") != -1):
             nfe = pdf_text.split("Número da NF-em ")[1].split(" ")[0].split("\n")[1]
             clientCode = pdf_text.split("TOMADOR DE SERVIÇO")[1].split("Nome/Razão Social:\n")[1].split("-")[0]
-            clientName = pdf_text.split("TOMADOR DE SERVIÇO")[1].split("Nome/Razão Social:\n")[1].split("-")[1].split("\n")[0].replace('.', '').replace('&', 'E')
+            clientName = pdf_text.split("TOMADOR DE SERVIÇO")[1].split("Nome/Razão Social:\n")[1].split("-")[1].split("\n")[0].replace('.', '').replace('&', 'E').replace('/', '')
             clientCnpj = pdf_text.split("TOMADOR DE SERVIÇO")[1].split("CPF/CNPJ:\n")[1].split('\n')[0].replace(".", "").replace('-', '').replace('/', '')
             metaCnpj = pdf_text.split("PRESTADOR DE SERVIÇOS")[1].split("CPF/CNPJ:\n")[1].split('\n')[0].replace(".", "").replace('-', '').replace('/', '')
-            metaName = pdf_text.split("PRESTADOR DE SERVIÇOS")[1].split("Razão Social:\n")[1].split('\n')[0].replace('.', '').replace('&', 'E')
+            metaNameAdjust = pdf_text.split("PRESTADOR DE SERVIÇOS")[1].split("Razão Social:\n")[1].split('\n')[0].replace('.', '').replace('&', 'E').split(' ')
+            if(metaNameAdjust[1] == "da" or metaNameAdjust[1] == "DA" or metaNameAdjust[1] == "de" or metaNameAdjust[1] == "DE" or metaNameAdjust[1] == "E" or metaNameAdjust[1] == "e"):
+                metaNameAdjust.remove(metaNameAdjust[1])
+            metaName = metaNameAdjust[0] + " " + metaNameAdjust[1]
             clientNameAdjust = clientName.split(' ')
-            if(clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e"):
+            if(clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e" or clientNameAdjust[1] == "RESIDENCIAL" or clientNameAdjust[1] == "CONDOMÍNIO" or clientNameAdjust[1] == "Residencial" or clientNameAdjust[1] == "Condomínio" or clientNameAdjust[1] == "CONDOMINIO" or clientNameAdjust[1] == "Condominio"):
                 clientNameAdjust.remove(clientNameAdjust[1])
             clientName = clientNameAdjust[0] + " " + clientNameAdjust[1]
             processDate = pdf_text.split('Data e Hora de Emissão')[0].split('\n')[0][3:10].replace('/', '-')
@@ -186,47 +216,88 @@ def rename_identifyClient_nfe():
         else:
             os.remove(archive)
 
-
+    print("- Separacao de NFe concluido.") 
     return data
 
 def rename_identifyClient_darf():
     archives = []
     data = []
 
+    print('\n- Separando DARF...')
     for root, dirs, files in os.walk(extract_to_darf):
         for filename in files:
             basename, extension = os.path.splitext(filename)
             archives.append(extract_to_darf + "/" + basename + "" + extension)
 
     for archive in archives:
+        
         pdf_file_obj = fitz.Document(archive)
         pdf_reader = pdf_file_obj.loadPage(0)
         pdf_text = str(pdf_reader.getText("text"))
+        pdf_file_obj.close()
 
-        nfe = pdf_text.split('NF/Emitido:')[1].split('\n')[5].split(' ')[8]
-        processDate = ''
-        clientCode = ''
-        clientNameAdjust = pdf_text.split('NF/Emitido:')[1].split('\n')[2].replace('&', 'E').replace('.', '').split(' ')
-        if clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e" or clientNameAdjust[1] == "do" or clientNameAdjust[1] == "DO":
-            clientNameAdjust.remove(clientNameAdjust[1])
-        clientName = clientNameAdjust[0] + " " + clientNameAdjust[1]
-        clientCnpj = pdf_text.split('NF/Emitido:')[1].split('\n')[4].replace('.', '').replace('/', '').replace('-', '')
-        metaName = pdf_text.split('Valores expressos em reais.\n')[1].split("\n")[0].replace('&', 'E').replace('.', '')
-        metaCnpj = pdf_text.split('NF/Emitido:')[1].split('\n')[10].replace('.', '').replace('/', '').replace('-', '')
+        if pdf_text.find("PIS / COFINS / CSLL") != -1:
 
-        os.rename(archive, extract_to_darf + "/" + clientName + " - NF " + nfe + " - (DARF)" + extension)
+            nfe = pdf_text.split('NF/Emitido:')[1].split('\n')[5].strip().replace('.', '')
+            if pdf_text.split('NF/Emitido:')[1].split('\n')[5].find(',') > -1:
+                nfe = pdf_text.split('NF/Emitido:')[1].split('\n')[4].strip().replace('.', '')
+            processDate = ""
+            clientCode = ""
+            clientNameAdjust = pdf_text.split('NF/Emitido:')[1].split('\n')[2].replace('&', 'E').replace('.', '').replace('/', '').split(' ')
+            if(clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e" or clientNameAdjust[1] == "RESIDENCIAL" or clientNameAdjust[1] == "CONDOMÍNIO" or clientNameAdjust[1] == "Residencial" or clientNameAdjust[1] == "Condomínio" or clientNameAdjust[1] == "CONDOMINIO" or clientNameAdjust[1] == "Condominio"):
+                clientNameAdjust.remove(clientNameAdjust[1])
+            clientName = clientNameAdjust[0] + " " + clientNameAdjust[1]
+            clientCnpj = pdf_text.split('NF/Emitido:')[1].split('\n')[4].replace('.', '').replace('/', '').replace('-', '')
+            metaNameAdjust = pdf_text.split('Valores expressos em reais.\n')[1].split("\n")[0].replace('&', 'E').replace('.', '').split(' ')
+            if(metaNameAdjust[1] == "da" or metaNameAdjust[1] == "DA" or metaNameAdjust[1] == "de" or metaNameAdjust[1] == "DE" or metaNameAdjust[1] == "E" or metaNameAdjust[1] == "e"):
+                metaNameAdjust.remove(metaNameAdjust[1])
+            metaName = metaNameAdjust[0] + " " + metaNameAdjust[1]
+            metaCnpj = pdf_text.split('NF/Emitido:')[1].split('\n')[10].replace('.', '').replace('/', '').replace('-', '')
 
-        data.append({
-            "nfe": nfe,
-            "processDate": processDate,
-            "clientCnpj": clientCnpj,
-            "clientCode": clientCode,
-            "clientName": clientName,
-            "metaCnpj": metaCnpj,
-            "metaName": metaName,
-            "type": "DARF",
-            "archive": extract_to_darf + "/" + clientName + " - NF " + nfe + " - (DARF)" + extension
-        })
+            os.rename(archive, extract_to_darf + "/" + clientName + " - NF " + nfe + " - (DARF 5952)" + extension)
 
+            data.append({
+                "nfe": nfe,
+                "processDate": processDate,
+                "clientCnpj": clientCnpj,
+                "clientCode": clientCode,
+                "clientName": clientName,
+                "metaCnpj": metaCnpj,
+                "metaName": metaName,
+                "type": "DARF 5952",
+                "archive": extract_to_darf + "/" + clientName + " - NF " + nfe + " - (DARF 5952)" + extension
+            })
+        else:
 
+            nfe = pdf_text.split('NF/Emitido:')[1].split('\n')[4].strip().replace('.', '')
+            if pdf_text.split('NF/Emitido:')[1].split('\n')[4].find(',') > -1:
+                nfe = pdf_text.split('NF/Emitido:')[1].split('\n')[4].strip().replace('.', '')
+            processDate = ""
+            clientCode = ""
+            clientNameAdjust = pdf_text.split('NF/Emitido:')[1].split('\n')[5].replace('&', 'E').replace('.', '').replace('/', '').split(' ')
+            if(clientNameAdjust[1] == "da" or clientNameAdjust[1] == "DA" or clientNameAdjust[1] == "de" or clientNameAdjust[1] == "DE" or clientNameAdjust[1] == "E" or clientNameAdjust[1] == "e" or clientNameAdjust[1] == "RESIDENCIAL" or clientNameAdjust[1] == "CONDOMÍNIO" or clientNameAdjust[1] == "Residencial" or clientNameAdjust[1] == "Condomínio" or clientNameAdjust[1] == "CONDOMINIO" or clientNameAdjust[1] == "Condominio"):
+                clientNameAdjust.remove(clientNameAdjust[1])
+            clientName = clientNameAdjust[0] + " " + clientNameAdjust[1]
+            clientCnpj = pdf_text.split('NF/Emitido:')[1].split('\n')[7].replace('.', '').replace('/', '').replace('-', '')
+            metaNameAdjust = pdf_text.split('Valores expressos em reais.\n')[1].split("\n")[5].replace('&', 'E').replace('.', '').split(' ')
+            if(metaNameAdjust[1] == "da" or metaNameAdjust[1] == "DA" or metaNameAdjust[1] == "de" or metaNameAdjust[1] == "DE" or metaNameAdjust[1] == "E" or metaNameAdjust[1] == "e"):
+                metaNameAdjust.remove(metaNameAdjust[1])
+            metaName = metaNameAdjust[0] + " " + metaNameAdjust[1]
+            metaCnpj = pdf_text.split('01 NOME / TELEFONE')[1].split('\n')[1].replace('/', '').replace('.', '').replace('-', '').replace(' ', '')
+
+            os.rename(archive, extract_to_darf + "/" + clientName + " - NF " + nfe + " - (DARF 1708)" + extension)
+
+            data.append({
+                "nfe": nfe,
+                "processDate": processDate,
+                "clientCnpj": clientCnpj,
+                "clientCode": clientCode,
+                "clientName": clientName,
+                "metaCnpj": metaCnpj,
+                "metaName": metaName,
+                "type": "DARF 1708",
+                "archive": extract_to_darf + "/" + clientName + " - NF " + nfe + " - (DARF 1708)" + extension
+            })
+    
+    print('- Separacao de DARF concluida.')
     return data

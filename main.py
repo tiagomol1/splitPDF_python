@@ -6,14 +6,16 @@ from adjustFiles import rename_identifyClient_nfe
 from adjustFiles import rename_identifyClient_darf
 from fileOrganizer import organizer 
 
+print('Iniciando Robô...')
+
 data = []
 boletoData = []
 nfeData = []
 darfData = []
 
-os.mkdir('/home/tiagomurilo/Documentos/pdfFinanceiro/boletos')
-os.mkdir('/home/tiagomurilo/Documentos/pdfFinanceiro/darf')
-os.mkdir('/home/tiagomurilo/Documentos/pdfFinanceiro/nfe')
+os.mkdir('C:/Users/Tiago Murilo/Desktop/boletos')
+os.mkdir('C:/Users/Tiago Murilo/Desktop/darf')
+os.mkdir('C:/Users/Tiago Murilo/Desktop/nfe')
 # use the two functions
 split_pdf_pages()
 boletoData += rename_identifyClient_boletos()
@@ -24,14 +26,16 @@ data = boletoData + nfeData + darfData
 
 organizer(data)
 
-print("Processo encerrando em:")
-x = 15
+print("\n\nProcesso encerrando em:")
+x = 5
 while(x > 0):
     time.sleep(1)
     print(str(x))
     x = x - 1
 
-print("Finalizado!")
-os.rmdir('/home/tiagomurilo/Documentos/pdfFinanceiro/boletos')
-os.rmdir('/home/tiagomurilo/Documentos/pdfFinanceiro/darf')
-os.rmdir('/home/tiagomurilo/Documentos/pdfFinanceiro/nfe')
+os.rmdir('C:/Users/Tiago Murilo/Desktop/boletos')
+os.rmdir('C:/Users/Tiago Murilo/Desktop/nfe')
+os.rmdir('C:/Users/Tiago Murilo/Desktop/darf')
+
+print(r"Processo 100% concluido!")
+time.sleep(3)
