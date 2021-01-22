@@ -1,5 +1,6 @@
 import os
 
+extract_to_nfe = r"C:/Users/Tiago Murilo/Desktop/nfe"
 directory = r"C:/Users/Tiago Murilo/Desktop/diretorioFinal"
 def organizer(archivesData):
     index = 0
@@ -11,6 +12,7 @@ def organizer(archivesData):
             x = 0
             for archiveCompare in archivesData:
                 if len(archivesData) - 1 == x:
+                    
                     os.rename(archive["archive"], "C:/Users/Tiago Murilo/Desktop/ajustados/" + archive["clientName"] + " - NF " + archive["nfe"] + " - (" + archive["type"] + ")" + str(index) + ".pdf")
 
                 nfeToCompara = archiveCompare["nfe"]
@@ -29,3 +31,18 @@ def organizer(archivesData):
                 os.mkdir(directory + "/" + archive["processDate"] + "/" + archive["metaName"])
 
             os.rename(archive["archive"], directory + "/" + archive["processDate"] + "/" + archive["metaName"] + "/" + archive["clientName"] + " - NF " + archive["nfe"] + " - (" + archive["type"] + ")" + str(index) + ".pdf")
+
+
+
+
+
+    archives = []
+    # TEMPORÁRIO
+    for root, dirs, files in os.walk(extract_to_nfe):
+        for filename in files:
+            basename, extension = os.path.splitext(filename)
+            archives.append(extract_to_nfe + "/" + basename + "" + extension)
+    x=0
+    for archive in archives:
+        x = x + 1
+        os.rename(archive, 'C:/Users/Tiago Murilo/Desktop/ajustados/nf - '+ str(x) +'.pdf')

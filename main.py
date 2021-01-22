@@ -18,8 +18,8 @@ os.mkdir('C:/Users/Tiago Murilo/Desktop/darf')
 os.mkdir('C:/Users/Tiago Murilo/Desktop/nfe')
 # use the two functions
 split_pdf_pages()
-boletoData += rename_identifyClient_boletos()
 nfeData += rename_identifyClient_nfe()
+boletoData += rename_identifyClient_boletos()
 darfData += rename_identifyClient_darf()
 
 data = boletoData + nfeData + darfData
